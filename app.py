@@ -531,8 +531,9 @@ else:
             # Automatically clean and analyze data
             with st.spinner("Cleaning and processing data..."):
                 # Clean data
-                cleaner = DataCleaner(df)
-                cleaned_df, report = cleaner.clean_data()
+                cleaner = DataCleaner()
+                cleaned_df = cleaner.clean_dataframe(df, fill_missing=True, remove_outliers=False)
+                report = cleaner.get_cleaning_report()
 
                 st.session_state.cleaned_df = cleaned_df
 
