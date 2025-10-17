@@ -852,15 +852,16 @@ with tab2:
         st.markdown("#### Model Evaluation History")
         eval_history = st.session_state.evaluator.get_evaluation_history(5)
         
-        if not eval_history.empty:
+        if eval_history:
             # Display as metrics
-            latest = eval_history.iloc[0]
+            latest = eval_history[0]
             st.metric("Latest Model", latest['model_name'])
-            st.metric("Latest R²", f"{latest['r2']:.4f}")
-            st.metric("Latest MAE", f"${latest['mae']:,.0f}")
+            st.metric("Latest R²", f"{latest['metrics']['r2']:.4f}")
+            st.metric("Latest MAE", f"${latest['metrics']['mae']:,.0f}")
             
             # Show table
-            st.dataframe(eval_history[['timestamp', 'model_name', 'mae', 'r2']], use_container_width=True)
+            eval_df = pd.DataFrame(eval_history)
+            st.dataframe(eval_df[['timestamp', 'model_name', 'metrics']], use_container_width=True)
         else:
             st.info("No evaluation history yet. Train a model first!")
     
@@ -869,11 +870,11 @@ with tab2:
         trends = st.session_state.evaluator.get_performance_trends()
         
         if trends and trends.get('trend') != 'insufficient_data':
-            trend_color = "green" if trends['trend'] == 'improving' else "orange"
-            st.markdown(f"**Trend:** :{trend_color}[{trends['trend'].upper()}]")
-            st.metric("Average R²", f"{trends['average_r2']:.4f}")
-            st.metric("Best R²", f"{trends['best_r2']:.4f}")
-            st.metric("Improvement", f"{trends['improvement']:.2f}%")
+            trend_color = "green" if trends.get('r2_trend', 'stable') == 'improving' else "orange"
+            st.markdown(f"**Trend:** :{trend_color}[{trends.get('r2_trend', 'stable').upper()}]")
+            st.metric("Average R²", f"{trends.get('latest_r2', 0):.4f}")
+            st.metric("Best R²", f"{trends.get('latest_r2', 0):.4f}")
+            st.metric("Improvement", f"{0:.2f}%")
         else:
             st.info("Train multiple models to see performance trends")
     
@@ -931,10 +932,10 @@ with tab2:
     st.markdown("#### Recent Feedback")
     recent_feedback = st.session_state.feedback_manager.get_all_feedback(5)
     
-    if not recent_feedback.empty:
-        for _, row in recent_feedback.iterrows():
-            with st.expander(f"{'⭐' * row['rating']} - {row['timestamp']}"):
-                st.write(row['comment'])
+    if recent_feedback:
+        for feedback in recent_feedback:
+            with st.expander(f"{'⭐' * feedback['user_rating']} - {feedback['timestamp']}"):
+                st.write(feedback.get('comments', 'No comments'))
     else:
         st.info("No feedback entries yet")
     
@@ -949,13 +950,13 @@ with tab2:
         st.markdown("#### Top Correlated Features")
         top_features = st.session_state.knowledge_base.get_top_correlated_features(5)
         
-        if not top_features.empty:
-            for idx, row in top_features.iterrows():
-                feature_name = row['feature_name'].replace('_', ' ').title()
-                corr_value = row['avg_correlation']
+        if top_features:
+            for feature in top_features:
+                feature_name = feature['feature'].replace('_', ' ').title()
+                corr_value = feature['correlation']
                 corr_pct = abs(corr_value) * 100
                 
-                st.write(f"**{idx + 1}. {feature_name}**")
+                st.write(f"**{feature_name}**")
                 st.progress(abs(corr_value))
                 st.caption(f"Correlation: {corr_value:.3f} ({corr_pct:.1f}%)")
         else:
@@ -965,12 +966,12 @@ with tab2:
         st.markdown("#### Market Insights")
         insights = st.session_state.knowledge_base.get_all_insights(5)
         
-        if not insights.empty:
-            for _, row in insights.iterrows():
-                insight_emoji = "💡" if row['confidence_score'] > 0.9 else "💭"
-                st.write(f"{insight_emoji} **{row['insight_type'].replace('_', ' ').title()}**")
-                st.caption(row['insight_value'])
-                st.caption(f"Confidence: {row['confidence_score']:.0%}")
+        if insights:
+            for insight in insights:
+                insight_emoji = "💡" if insight.get('confidence_score', 0) > 0.9 else "💭"
+                st.write(f"{insight_emoji} **{insight.get('type', 'Unknown').replace('_', ' ').title()}**")
+                st.caption(insight.get('description', 'No description'))
+                st.caption(f"Confidence: {insight.get('confidence_score', 0):.0%}")
                 st.markdown("---")
         else:
             st.info("No insights generated yet")
@@ -1328,8 +1329,8 @@ with tab5:
                 
                 st.markdown("#### Top 5 Most Important Features")
                 top_features = predictor.get_top_features(5)
-                for idx, row in top_features.iterrows():
-                    st.write(f"**{idx + 1}. {row['feature'].replace('_', ' ').title()}** - {row['importance']*100:.1f}% importance")
+                for feature in top_features:
+                    st.write(f"**{feature['feature'].replace('_', ' ').title()}** - {feature['importance']*100:.1f}% importance")
             
             st.markdown("---")
             
@@ -1579,15 +1580,16 @@ with tab6:
         st.markdown("#### Model Evaluation History")
         eval_history = st.session_state.evaluator.get_evaluation_history(5)
         
-        if not eval_history.empty:
+        if eval_history:
             # Display as metrics
-            latest = eval_history.iloc[0]
+            latest = eval_history[0]
             st.metric("Latest Model", latest['model_name'])
-            st.metric("Latest R²", f"{latest['r2']:.4f}")
-            st.metric("Latest MAE", f"${latest['mae']:,.0f}")
+            st.metric("Latest R²", f"{latest['metrics']['r2']:.4f}")
+            st.metric("Latest MAE", f"${latest['metrics']['mae']:,.0f}")
             
             # Show table
-            st.dataframe(eval_history[['timestamp', 'model_name', 'mae', 'r2']], width='stretch')
+            eval_df = pd.DataFrame(eval_history)
+            st.dataframe(eval_df[['timestamp', 'model_name', 'metrics']], width='stretch')
         else:
             st.info("No evaluation history yet. Train a model first!")
     
@@ -1596,11 +1598,11 @@ with tab6:
         trends = st.session_state.evaluator.get_performance_trends()
         
         if trends and trends.get('trend') != 'insufficient_data':
-            trend_color = "green" if trends['trend'] == 'improving' else "orange"
-            st.markdown(f"**Trend:** :{trend_color}[{trends['trend'].upper()}]")
-            st.metric("Average R²", f"{trends['average_r2']:.4f}")
-            st.metric("Best R²", f"{trends['best_r2']:.4f}")
-            st.metric("Improvement", f"{trends['improvement']:.2f}%")
+            trend_color = "green" if trends.get('r2_trend', 'stable') == 'improving' else "orange"
+            st.markdown(f"**Trend:** :{trend_color}[{trends.get('r2_trend', 'stable').upper()}]")
+            st.metric("Average R²", f"{trends.get('latest_r2', 0):.4f}")
+            st.metric("Best R²", f"{trends.get('latest_r2', 0):.4f}")
+            st.metric("Improvement", f"{0:.2f}%")
         else:
             st.info("Train multiple models to see performance trends")
     
@@ -1658,10 +1660,10 @@ with tab6:
     st.markdown("#### Recent Feedback")
     recent_feedback = st.session_state.feedback_manager.get_all_feedback(5)
     
-    if not recent_feedback.empty:
-        for _, row in recent_feedback.iterrows():
-            with st.expander(f"{'⭐' * row['rating']} - {row['timestamp']}"):
-                st.write(row['comment'])
+    if recent_feedback:
+        for feedback in recent_feedback:
+            with st.expander(f"{'⭐' * feedback['user_rating']} - {feedback['timestamp']}"):
+                st.write(feedback.get('comments', 'No comments'))
     else:
         st.info("No feedback entries yet")
     
@@ -1676,13 +1678,13 @@ with tab6:
         st.markdown("#### Top Correlated Features")
         top_features = st.session_state.knowledge_base.get_top_correlated_features(5)
         
-        if not top_features.empty:
-            for idx, row in top_features.iterrows():
-                feature_name = row['feature_name'].replace('_', ' ').title()
-                corr_value = row['avg_correlation']
+        if top_features:
+            for feature in top_features:
+                feature_name = feature['feature'].replace('_', ' ').title()
+                corr_value = feature['correlation']
                 corr_pct = abs(corr_value) * 100
                 
-                st.write(f"**{idx + 1}. {feature_name}**")
+                st.write(f"**{feature_name}**")
                 st.progress(abs(corr_value))
                 st.caption(f"Correlation: {corr_value:.3f} ({corr_pct:.1f}%)")
         else:
@@ -1692,12 +1694,12 @@ with tab6:
         st.markdown("#### Market Insights")
         insights = st.session_state.knowledge_base.get_all_insights(5)
         
-        if not insights.empty:
-            for _, row in insights.iterrows():
-                insight_emoji = "💡" if row['confidence_score'] > 0.9 else "💭"
-                st.write(f"{insight_emoji} **{row['insight_type'].replace('_', ' ').title()}**")
-                st.caption(row['insight_value'])
-                st.caption(f"Confidence: {row['confidence_score']:.0%}")
+        if insights:
+            for insight in insights:
+                insight_emoji = "💡" if insight.get('confidence_score', 0) > 0.9 else "💭"
+                st.write(f"{insight_emoji} **{insight.get('type', 'Unknown').replace('_', ' ').title()}**")
+                st.caption(insight.get('description', 'No description'))
+                st.caption(f"Confidence: {insight.get('confidence_score', 0):.0%}")
                 st.markdown("---")
         else:
             st.info("No insights generated yet")
@@ -2010,7 +2012,7 @@ with tab6:
     st.markdown("#### Recent Integrity Checks")
     integrity_log = st.session_state.integrity_checker.get_integrity_log(5)
     
-    if not integrity_log.empty:
+    if integrity_log:
         st.dataframe(integrity_log, width='stretch')
     else:
         st.info("No integrity checks performed yet")
