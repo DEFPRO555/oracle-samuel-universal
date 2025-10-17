@@ -17,6 +17,11 @@ class RealEstateVisualizer:
     
     def __init__(self, df: pd.DataFrame = None):
         self.logger = logging.getLogger(__name__)
+        # Remove duplicate columns immediately if they exist
+        if df is not None and df.columns.duplicated().any():
+            self.logger.warning(f"Duplicate columns detected during initialization: {df.columns[df.columns.duplicated()].tolist()}")
+            df = df.loc[:, ~df.columns.duplicated()]
+            self.logger.info(f"Removed duplicate columns. Remaining columns: {list(df.columns)}")
         self.df = df
         self.set_style()
     

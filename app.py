@@ -210,6 +210,16 @@ def svg_icon(name: str, size: int = 28, color: str = "#D4AF37") -> str:
         path = "<circle cx='12' cy='12' r='10'></circle>"
     return f"<svg {common}>{path}</svg>"
 
+def remove_duplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove duplicate column names from dataframe, keeping only the first occurrence."""
+    if df is not None and df.columns.duplicated().any():
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Duplicate columns detected: {df.columns[df.columns.duplicated()].tolist()}")
+        df = df.loc[:, ~df.columns.duplicated()]
+        logger.info(f"Removed duplicate columns. Remaining: {list(df.columns)}")
+    return df
+
 # Initialize session state
 if 'df' not in st.session_state:
     st.session_state.df = None
@@ -535,6 +545,8 @@ else:
                 cleaned_df = cleaner.clean_dataframe(df, fill_missing=True, remove_outliers=False)
                 report = cleaner.get_cleaning_report()
 
+                # Remove any duplicate columns before storing
+                cleaned_df = remove_duplicate_columns(cleaned_df)
                 st.session_state.cleaned_df = cleaned_df
 
                 # Generate MD5
@@ -732,7 +744,9 @@ with tab1:
                         cleaner = DataCleaner()
                         cleaned_df = cleaner.clean_dataframe(df, fill_missing=True, remove_outliers=False)
                         report = cleaner.get_cleaning_report()
-                        
+
+                        # Remove any duplicate columns before storing
+                        cleaned_df = remove_duplicate_columns(cleaned_df)
                         st.session_state.cleaned_df = cleaned_df
                         
                         # Generate MD5
@@ -2066,7 +2080,10 @@ with tab7:
                             
                             # Safely append to existing data
                             updated_df = pd.concat([current_df, new_row_df], ignore_index=True)
-                            
+
+                            # Remove any duplicate columns before storing
+                            updated_df = remove_duplicate_columns(updated_df)
+
                             # Update session state FIRST
                             st.session_state.cleaned_df = updated_df
                             
