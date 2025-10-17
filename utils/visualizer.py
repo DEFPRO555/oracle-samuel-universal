@@ -236,8 +236,15 @@ class RealEstateVisualizer:
             # Return empty figure if no data
             return go.Figure()
 
+        # Check for duplicate columns and handle them
+        df_clean = self.df.copy()
+        if df_clean.columns.duplicated().any():
+            self.logger.warning("Duplicate columns detected, removing duplicates")
+            # Keep only the first occurrence of each column
+            df_clean = df_clean.loc[:, ~df_clean.columns.duplicated()]
+
         fig = px.scatter(
-            self.df,
+            df_clean,
             x=x_col,
             y=y_col,
             title=f'{y_col.replace("_", " ").title()} vs {x_col.replace("_", " ").title()}',
@@ -273,10 +280,17 @@ class RealEstateVisualizer:
             # Return empty figure if no data
             return go.Figure()
 
+        # Check for duplicate columns and handle them
+        df_clean = self.df.copy()
+        if df_clean.columns.duplicated().any():
+            self.logger.warning("Duplicate columns detected, removing duplicates")
+            # Keep only the first occurrence of each column
+            df_clean = df_clean.loc[:, ~df_clean.columns.duplicated()]
+
         fig = go.Figure()
 
         fig.add_trace(go.Box(
-            y=self.df[column],
+            y=df_clean[column],
             name=column.replace("_", " ").title(),
             boxmean='sd',  # Show mean and standard deviation
             marker_color='lightblue',

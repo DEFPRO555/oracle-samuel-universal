@@ -124,17 +124,24 @@ class DataCleaner:
     
     def _validate_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate data integrity."""
+        # Check for duplicate column names and remove them
+        if df.columns.duplicated().any():
+            self.logger.warning(f"Duplicate column names detected: {df.columns[df.columns.duplicated()].tolist()}")
+            # Keep only the first occurrence of each column
+            df = df.loc[:, ~df.columns.duplicated()]
+            self.logger.info(f"Removed duplicate columns. New columns: {list(df.columns)}")
+
         # Remove duplicate rows
         duplicates_before = df.duplicated().sum()
         df = df.drop_duplicates()
         duplicates_after = df.duplicated().sum()
-        
+
         if duplicates_before > 0:
             self.logger.info(f"Duplicates removed: {duplicates_before}")
-        
+
         # Remove rows with all NaN values
         df = df.dropna(how='all')
-        
+
         return df
     
     def get_cleaning_report(self) -> Dict[str, Any]:
@@ -144,13 +151,44 @@ class DataCleaner:
             'summary': f"Cleaned data from {self.cleaning_stats.get('original_shape', 'Unknown')} to {self.cleaning_stats.get('cleaned_shape', 'Unknown')}"
         }
     
+    def get_summary_stats(self, df: pd.DataFrame = None) -> Dict[str, Any]:
+        """
+        Get summary statistics for the dataframe.
+
+        Args:
+            df: DataFrame to analyze (optional, can use last cleaned df)
+
+        Returns:
+            Dictionary with summary statistics
+        """
+        if df is None:
+            # Return empty stats if no dataframe provided
+            return {
+                'total_records': 0,
+                'numeric_columns': 0,
+                'categorical_columns': 0,
+                'missing_values': 0
+            }
+
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        categorical_cols = df.select_dtypes(include=['object', 'string', 'category']).columns
+
+        return {
+            'total_records': len(df),
+            'numeric_columns': len(numeric_cols),
+            'categorical_columns': len(categorical_cols),
+            'missing_values': df.isnull().sum().sum(),
+            'shape': df.shape,
+            'columns': list(df.columns)
+        }
+
     def validate_uploaded_data(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
         Validate uploaded data for real estate prediction.
-        
+
         Args:
             df: DataFrame to validate
-            
+
         Returns:
             Dictionary with validation results
         """
@@ -160,36 +198,36 @@ class DataCleaner:
             'warnings': [],
             'data_info': {}
         }
-        
+
         # Check if DataFrame is empty
         if df.empty:
             validation_results['is_valid'] = False
             validation_results['errors'].append("Uploaded data is empty")
             return validation_results
-        
+
         # Check minimum number of rows
         if len(df) < 10:
             validation_results['warnings'].append("Dataset has fewer than 10 rows, which may affect model performance")
-        
+
         # Check for required columns (basic real estate features)
         expected_columns = ['price', 'area', 'bedrooms', 'bathrooms']
         missing_columns = [col for col in expected_columns if col not in df.columns]
-        
+
         if missing_columns:
             validation_results['warnings'].append(f"Missing common real estate columns: {missing_columns}")
-        
+
         # Check data types
         numeric_columns = df.select_dtypes(include=[np.number]).columns
         if len(numeric_columns) < 2:
             validation_results['warnings'].append("Dataset has very few numeric columns")
-        
+
         # Check for excessive missing values
         missing_percentage = (df.isnull().sum() / len(df)) * 100
         high_missing_cols = missing_percentage[missing_percentage > 50].index.tolist()
-        
+
         if high_missing_cols:
             validation_results['warnings'].append(f"Columns with >50% missing values: {high_missing_cols}")
-        
+
         # Store data information
         validation_results['data_info'] = {
             'shape': df.shape,
@@ -198,5 +236,5 @@ class DataCleaner:
             'missing_values': df.isnull().sum().to_dict(),
             'data_types': df.dtypes.to_dict()
         }
-        
+
         return validation_results

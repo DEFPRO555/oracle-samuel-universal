@@ -560,7 +560,7 @@ else:
                     st.info(item)
 
                 # Show summary stats
-                stats = cleaner.get_summary_stats()
+                stats = cleaner.get_summary_stats(cleaned_df)
                 st.markdown("### Data Summary")
 
                 col_a, col_b, col_c = st.columns(3)
@@ -758,7 +758,7 @@ with tab1:
                             st.info(item)
                         
                         # Show summary stats
-                        stats = cleaner.get_summary_stats()
+                        stats = cleaner.get_summary_stats(cleaned_df)
                         st.markdown("### Data Summary")
                         
                         col_a, col_b, col_c = st.columns(3)
