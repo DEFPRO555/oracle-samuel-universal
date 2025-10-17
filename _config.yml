@@ -1,0 +1,193 @@
+# Oracle Samuel - GitHub Pages Configuration
+# © 2025 Dowek Analytics Ltd. All Rights Reserved.
+
+# Site settings
+title: "Oracle Samuel - Universal AI Platform"
+description: "Advanced Machine Learning Platform for Market Analysis. Real Estate, Stock Market, E-commerce and more."
+url: "https://yourusername.github.io"
+baseurl: "/oracle-samuel-universal"
+logo: "/oracle-samuel-universal/assets/images/logo.png"
+favicon: "/oracle-samuel-universal/favicon.ico"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+permalink: pretty
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# SEO settings
+seo:
+  title: "Oracle Samuel - Universal AI Platform"
+  description: "Advanced Machine Learning Platform for Market Analysis"
+  keywords: "AI, Machine Learning, Real Estate, Market Analysis, Data Science, Oracle Samuel"
+  author: "© 2025 Dowek Analytics Ltd."
+  social:
+    name: "Oracle Samuel"
+    links:
+      - "https://github.com/yourusername/oracle-samuel-universal"
+
+# Navigation
+navigation:
+  - title: "Home"
+    url: "/"
+  - title: "Features"
+    url: "/#features"
+  - title: "Demo"
+    url: "/#demo"
+  - title: "Markets"
+    url: "/#markets"
+  - title: "Documentation"
+    url: "/#documentation"
+
+# Footer
+footer:
+  copyright: "© 2025 Dowek Analytics Ltd. All Rights Reserved."
+  description: "MD5-Protected Universal AI System. Unauthorized use prohibited."
+
+# Social links
+social:
+  github: "https://github.com/yourusername/oracle-samuel-universal"
+  linkedin: "https://linkedin.com/company/dowek-analytics"
+  twitter: "https://twitter.com/oracle_samuel"
+
+# Analytics (optional)
+google_analytics: "GA_TRACKING_ID"
+
+# Comments (optional)
+disqus:
+  shortname: "oracle-samuel"
+
+# Pagination
+paginate: 5
+paginate_path: "/page:num/"
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache
+  - .jekyll-metadata
+  - requirements.txt
+  - app.py
+  - agent.py
+  - "*.py"
+  - .github/
+
+# Include files
+include:
+  - _redirects
+  - CNAME
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "doc"
+
+# Sass settings
+sass:
+  sass_dir: _sass
+  style: compressed
+
+# Theme settings
+theme: minima
+
+# Custom theme settings
+oracle_samuel:
+  primary_color: "#6366f1"
+  secondary_color: "#8b5cf6"
+  accent_color: "#06b6d4"
+  dark_color: "#1f2937"
+  light_color: "#f8fafc"
+  
+  # Features
+  features:
+    - title: "Advanced Analytics"
+      description: "Multiple ML algorithms including Random Forest, XGBoost, LightGBM, and Linear Regression."
+      icon: "fas fa-chart-line"
+    - title: "K-means Clustering"
+      description: "Market segmentation and customer grouping for better insights and targeting."
+      icon: "fas fa-layer-group"
+    - title: "Confusion Matrix"
+      description: "Classification accuracy assessment with detailed performance metrics."
+      icon: "fas fa-chart-bar"
+    - title: "Security Features"
+      description: "MD5 protection, data integrity verification, and secure data transmission."
+      icon: "fas fa-shield-alt"
+    - title: "Responsive UI"
+      description: "Beautiful, modern interface that works perfectly on all devices."
+      icon: "fas fa-mobile-alt"
+    - title: "Universal Compatibility"
+      description: "Works with any tabular data from any market or industry."
+      icon: "fas fa-globe"
+
+  # Markets
+  markets:
+    - name: "Real Estate"
+      description: "Property prices, market trends, location analysis"
+      icon: "fas fa-home"
+    - name: "Diamond Market"
+      description: "Diamond prices, quality assessment, market valuation"
+      icon: "fas fa-gem"
+    - name: "Stock Market"
+      description: "Stock prices, trading patterns, market analysis"
+      icon: "fas fa-chart-line"
+    - name: "E-commerce"
+      description: "Product sales, customer behavior, demand forecasting"
+      icon: "fas fa-shopping-cart"
+    - name: "Healthcare"
+      description: "Patient data, treatment outcomes, medical research"
+      icon: "fas fa-heartbeat"
+    - name: "Education"
+      description: "Student performance, course effectiveness, learning analytics"
+      icon: "fas fa-graduation-cap"
+    - name: "Agriculture"
+      description: "Crop yields, weather impact, farming optimization"
+      icon: "fas fa-seedling"
+    - name: "Energy"
+      description: "Consumption patterns, renewable energy, grid optimization"
+      icon: "fas fa-bolt"
+
+# Performance settings
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  startings: [html, head, body]
+
+# Security settings
+security:
+  content_security_policy:
+    default-src: 'self'
+    style-src: 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com
+    script-src: 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com
+    font-src: 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com
+    img-src: 'self' data: https:
+    connect-src: 'self' https://www.google-analytics.com
+
+# Cache settings
+cache:
+  enabled: true
+  duration: 86400
