@@ -194,12 +194,12 @@ class RealEstateVisualizer:
                                     feature_column: str = 'area') -> go.Figure:
         """
         Create an interactive plotly scatter plot.
-        
+
         Args:
             df: DataFrame with data
             price_column: Name of price column
             feature_column: Name of feature column for x-axis
-            
+
         Returns:
             Plotly figure
         """
@@ -208,17 +208,89 @@ class RealEstateVisualizer:
                         labels={price_column: price_column.title(),
                                feature_column: feature_column.title()},
                         template=self.plotly_template)
-        
+
         # Add trend line
         fig.add_traces(px.scatter(df, x=feature_column, y=price_column,
                                  trendline="ols").data[1])
-        
+
         fig.update_layout(
             xaxis_title=feature_column.title(),
             yaxis_title=price_column.title(),
             hovermode='closest'
         )
-        
+
+        return fig
+
+    def plot_scatter(self, x_col: str, y_col: str) -> go.Figure:
+        """
+        Create an interactive scatter plot between two columns.
+
+        Args:
+            x_col: Name of x-axis column
+            y_col: Name of y-axis column
+
+        Returns:
+            Plotly figure
+        """
+        if self.df is None:
+            # Return empty figure if no data
+            return go.Figure()
+
+        fig = px.scatter(
+            self.df,
+            x=x_col,
+            y=y_col,
+            title=f'{y_col.replace("_", " ").title()} vs {x_col.replace("_", " ").title()}',
+            labels={
+                x_col: x_col.replace("_", " ").title(),
+                y_col: y_col.replace("_", " ").title()
+            },
+            template=self.plotly_template,
+            trendline="ols",
+            trendline_color_override="red"
+        )
+
+        fig.update_layout(
+            xaxis_title=x_col.replace("_", " ").title(),
+            yaxis_title=y_col.replace("_", " ").title(),
+            hovermode='closest',
+            height=500
+        )
+
+        return fig
+
+    def plot_box_plot(self, column: str) -> go.Figure:
+        """
+        Create an interactive box plot for a column.
+
+        Args:
+            column: Name of column to plot
+
+        Returns:
+            Plotly figure
+        """
+        if self.df is None:
+            # Return empty figure if no data
+            return go.Figure()
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Box(
+            y=self.df[column],
+            name=column.replace("_", " ").title(),
+            boxmean='sd',  # Show mean and standard deviation
+            marker_color='lightblue',
+            boxpoints='outliers'  # Show outliers
+        ))
+
+        fig.update_layout(
+            title=f'Distribution of {column.replace("_", " ").title()}',
+            yaxis_title=column.replace("_", " ").title(),
+            template=self.plotly_template,
+            height=500,
+            showlegend=False
+        )
+
         return fig
     
     def create_interactive_correlation_plot(self, df: pd.DataFrame) -> go.Figure:
@@ -261,32 +333,169 @@ class RealEstateVisualizer:
                                      figsize: Tuple[int, int] = (10, 6)) -> plt.Figure:
         """
         Create a horizontal bar plot of feature importance.
-        
+
         Args:
             feature_importance: Dictionary with feature names and importance scores
             title: Plot title
             figsize: Figure size tuple
-            
+
         Returns:
             Matplotlib figure
         """
         # Sort features by importance
         sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
         features, importances = zip(*sorted_features)
-        
+
         fig, ax = plt.subplots(figsize=figsize)
         bars = ax.barh(features, importances, color='skyblue', alpha=0.7)
-        
+
         # Add value labels on bars
         for i, (bar, importance) in enumerate(zip(bars, importances)):
             ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2,
                    f'{importance:.3f}', ha='left', va='center')
-        
+
         ax.set_xlabel('Importance Score')
         ax.set_title(title)
         ax.grid(True, alpha=0.3, axis='x')
-        
+
         plt.tight_layout()
+        return fig
+
+    def plot_feature_importance(self, feature_importance: pd.DataFrame) -> go.Figure:
+        """
+        Create an interactive plotly bar chart of feature importance.
+
+        Args:
+            feature_importance: DataFrame with 'feature' and 'importance' columns
+
+        Returns:
+            Plotly figure
+        """
+        if feature_importance is None or feature_importance.empty:
+            return go.Figure()
+
+        # Sort by importance
+        fi_sorted = feature_importance.sort_values('importance', ascending=True)
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Bar(
+            x=fi_sorted['importance'],
+            y=fi_sorted['feature'],
+            orientation='h',
+            marker_color='lightblue',
+            text=fi_sorted['importance'].round(3),
+            textposition='outside'
+        ))
+
+        fig.update_layout(
+            title='Feature Importance',
+            xaxis_title='Importance Score',
+            yaxis_title='Features',
+            template=self.plotly_template,
+            height=max(400, len(fi_sorted) * 30),
+            showlegend=False
+        )
+
+        return fig
+
+    def plot_actual_vs_predicted(self, y_actual: np.ndarray, y_pred: np.ndarray) -> go.Figure:
+        """
+        Create an interactive scatter plot of actual vs predicted values.
+
+        Args:
+            y_actual: Actual values
+            y_pred: Predicted values
+
+        Returns:
+            Plotly figure
+        """
+        # Calculate R² score
+        ss_res = np.sum((y_actual - y_pred) ** 2)
+        ss_tot = np.sum((y_actual - np.mean(y_actual)) ** 2)
+        r2 = 1 - (ss_res / ss_tot)
+
+        fig = go.Figure()
+
+        # Scatter plot
+        fig.add_trace(go.Scatter(
+            x=y_actual,
+            y=y_pred,
+            mode='markers',
+            name='Predictions',
+            marker=dict(
+                color='lightblue',
+                size=8,
+                opacity=0.6
+            ),
+            text=[f'Actual: {a:.0f}<br>Predicted: {p:.0f}' for a, p in zip(y_actual, y_pred)],
+            hovertemplate='%{text}<extra></extra>'
+        ))
+
+        # Perfect prediction line
+        min_val = min(y_actual.min(), y_pred.min())
+        max_val = max(y_actual.max(), y_pred.max())
+        fig.add_trace(go.Scatter(
+            x=[min_val, max_val],
+            y=[min_val, max_val],
+            mode='lines',
+            name='Perfect Prediction',
+            line=dict(color='red', dash='dash', width=2)
+        ))
+
+        fig.update_layout(
+            title=f'Actual vs Predicted Values (R² = {r2:.4f})',
+            xaxis_title='Actual Values',
+            yaxis_title='Predicted Values',
+            template=self.plotly_template,
+            height=500,
+            hovermode='closest'
+        )
+
+        return fig
+
+    def plot_residuals(self, y_actual: np.ndarray, y_pred: np.ndarray) -> go.Figure:
+        """
+        Create an interactive residual plot.
+
+        Args:
+            y_actual: Actual values
+            y_pred: Predicted values
+
+        Returns:
+            Plotly figure
+        """
+        residuals = y_actual - y_pred
+
+        fig = go.Figure()
+
+        # Residual scatter plot
+        fig.add_trace(go.Scatter(
+            x=y_pred,
+            y=residuals,
+            mode='markers',
+            name='Residuals',
+            marker=dict(
+                color='lightcoral',
+                size=8,
+                opacity=0.6
+            ),
+            text=[f'Predicted: {p:.0f}<br>Residual: {r:.0f}' for p, r in zip(y_pred, residuals)],
+            hovertemplate='%{text}<extra></extra>'
+        ))
+
+        # Zero line
+        fig.add_hline(y=0, line_dash="dash", line_color="red", line_width=2)
+
+        fig.update_layout(
+            title='Residual Plot',
+            xaxis_title='Predicted Values',
+            yaxis_title='Residuals',
+            template=self.plotly_template,
+            height=500,
+            hovermode='closest'
+        )
+
         return fig
     
     def create_model_comparison_plot(self, model_metrics: Dict[str, Dict[str, float]],

@@ -29,24 +29,49 @@ class RealEstatePredictor:
         self.model = None  # Alias for best_model for backwards compatibility
         self.feature_importance = None  # Store feature importance
         self.metrics = {}  # Store metrics in expected format
-        
-    def prepare_data(self, df: pd.DataFrame, target_column: str, 
-                    test_size: float = 0.2, random_state: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+        self._X = None  # Store processed features
+        self._y = None  # Store target values
+
+    def prepare_data(self, df: pd.DataFrame = None, target_column: str = None,
+                    test_size: float = 0.2, random_state: int = 42):
         """
         Prepare data for training by encoding categorical variables and scaling features.
-        
+
         Args:
-            df: Input DataFrame
-            target_column: Name of the target column
+            df: Input DataFrame (optional, uses session state if not provided)
+            target_column: Name of the target column (optional, auto-detects if not provided)
             test_size: Proportion of data for testing
             random_state: Random seed for reproducibility
-            
+
         Returns:
-            X_train, X_test, y_train, y_test
+            - If called with no arguments: Returns (X, y) tuple of stored data
+            - If called with arguments: Returns (X_train, X_test, y_train, y_test) tuple
         """
+        # Handle no-argument call - return stored data
+        if df is None:
+            if self._X is not None and self._y is not None:
+                return self._X, self._y
+            else:
+                # Try to get from session state
+                import streamlit as st
+                if 'cleaned_df' in st.session_state and st.session_state.cleaned_df is not None:
+                    df = st.session_state.cleaned_df
+
+                    # Auto-detect target column
+                    possible_targets = ['price', 'Price', 'PRICE', 'SalePrice', 'sale_price']
+                    for col in possible_targets:
+                        if col in df.columns:
+                            target_column = col
+                            break
+
+                    if target_column is None:
+                        raise ValueError("Could not auto-detect target column")
+                else:
+                    raise ValueError("No data available. Please provide DataFrame or train model first.")
+
         self.logger.info(f"Preparing data for prediction with target: {target_column}")
         self.target_column = target_column
-        
+
         # Separate features and target
         X = df.drop(columns=[target_column])
         y = df[target_column]
@@ -56,25 +81,29 @@ class RealEstatePredictor:
         
         # Handle categorical variables
         X_encoded = self._encode_categorical_features(X)
-        
+
+        # Store processed features and target for no-argument calls
+        self._X = X_encoded
+        self._y = y
+
         # Split the data
         X_train, X_test, y_train, y_test = train_test_split(
             X_encoded, y, test_size=test_size, random_state=random_state
         )
-        
+
         # Scale features
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
-        
+
         self.scalers['main'] = scaler
-        
+
         # Convert back to DataFrame
         X_train_df = pd.DataFrame(X_train_scaled, columns=X_encoded.columns, index=X_train.index)
         X_test_df = pd.DataFrame(X_test_scaled, columns=X_encoded.columns, index=X_test.index)
-        
+
         self.logger.info(f"Data prepared. Train shape: {X_train_df.shape}, Test shape: {X_test_df.shape}")
-        
+
         return X_train_df, X_test_df, y_train, y_test
     
     def _encode_categorical_features(self, X: pd.DataFrame) -> pd.DataFrame:
