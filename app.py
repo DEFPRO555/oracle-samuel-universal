@@ -549,7 +549,7 @@ else:
                 db.save_signature(signature)
 
                 # Initialize predictor and agent
-                st.session_state.predictor = RealEstatePredictor(cleaned_df)
+                st.session_state.predictor = RealEstatePredictor()
                 st.session_state.agent = OracleSamuelAgent(cleaned_df, st.session_state.predictor)
 
                 st.success("✅ Data cleaned and saved to database!")
@@ -729,8 +729,9 @@ with tab1:
                 if st.button("Clean and Analyze Data", type="primary"):
                     with st.spinner("Cleaning and processing data..."):
                         # Clean data
-                        cleaner = DataCleaner(df)
-                        cleaned_df, report = cleaner.clean_data()
+                        cleaner = DataCleaner()
+                        cleaned_df = cleaner.clean_dataframe(df, fill_missing=True, remove_outliers=False)
+                        report = cleaner.get_cleaning_report()
                         
                         st.session_state.cleaned_df = cleaned_df
                         
@@ -746,7 +747,7 @@ with tab1:
                         db.save_signature(signature)
                         
                         # Initialize predictor and agent
-                        st.session_state.predictor = RealEstatePredictor(cleaned_df)
+                        st.session_state.predictor = RealEstatePredictor()
                         st.session_state.agent = OracleSamuelAgent(cleaned_df, st.session_state.predictor)
                         
                         st.success("Data cleaned and saved to database!")
@@ -1255,7 +1256,7 @@ with tab5:
             if st.button("Train Model", type="primary", key="train_model_button"):
                 with st.spinner("Training model... This may take a moment..."):
                     try:
-                        predictor = RealEstatePredictor(st.session_state.cleaned_df)
+                        predictor = RealEstatePredictor()
                         success, metrics, y_test, y_pred = predictor.train_model(model_type)
                         
                         if success:
@@ -2362,7 +2363,7 @@ with tab7:
                             
                             # Retrain the model with new data
                             st.info("🔄 Retraining models with updated dataset...")
-                            predictor = RealEstatePredictor(updated_df)
+                            predictor = RealEstatePredictor()
                             success, metrics, _, _ = predictor.train_model('linear_regression')
                             
                             if success:

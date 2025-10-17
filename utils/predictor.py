@@ -26,6 +26,9 @@ class RealEstatePredictor:
         self.target_column = None
         self.best_model = None
         self.model_metrics = {}
+        self.model = None  # Alias for best_model for backwards compatibility
+        self.feature_importance = None  # Store feature importance
+        self.metrics = {}  # Store metrics in expected format
         
     def prepare_data(self, df: pd.DataFrame, target_column: str, 
                     test_size: float = 0.2, random_state: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
@@ -129,9 +132,22 @@ class RealEstatePredictor:
         # Select best model based on cross-validation score
         best_model_name = max(model_scores.keys(), key=lambda x: model_scores[x]['cv_mean'])
         self.best_model = self.models[best_model_name]
-        
+        self.model = self.best_model  # Alias for backwards compatibility
+
+        # Store feature importance if available
+        if hasattr(self.best_model, 'feature_importances_'):
+            self.feature_importance = pd.DataFrame({
+                'feature': self.feature_columns,
+                'importance': self.best_model.feature_importances_
+            }).sort_values('importance', ascending=False)
+        elif hasattr(self.best_model, 'coef_'):
+            self.feature_importance = pd.DataFrame({
+                'feature': self.feature_columns,
+                'importance': np.abs(self.best_model.coef_)
+            }).sort_values('importance', ascending=False)
+
         self.logger.info(f"Best model: {best_model_name} with CV score: {model_scores[best_model_name]['cv_mean']:.4f}")
-        
+
         return model_scores
     
     def evaluate_models(self, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, Any]:
@@ -168,6 +184,19 @@ class RealEstatePredictor:
             }
         
         self.model_metrics = evaluation_results
+
+        # Set self.metrics to best model's metrics for backwards compatibility
+        if self.best_model:
+            for name, model in self.models.items():
+                if model is self.best_model and name in evaluation_results:
+                    self.metrics = {
+                        'r2_score': evaluation_results[name]['r2'],
+                        'mae': evaluation_results[name]['mae'],
+                        'rmse': evaluation_results[name]['rmse'],
+                        'mse': evaluation_results[name]['mse']
+                    }
+                    break
+
         return evaluation_results
     
     def predict(self, X: pd.DataFrame, model_name: Optional[str] = None) -> np.ndarray:
@@ -322,7 +351,7 @@ class RealEstatePredictor:
     def get_model_summary(self) -> Dict[str, Any]:
         """
         Get a summary of all trained models and their performance.
-        
+
         Returns:
             Dictionary with model summary information
         """
@@ -333,12 +362,138 @@ class RealEstatePredictor:
             'target_column': self.target_column,
             'model_performance': self.model_metrics
         }
-        
+
         if self.best_model:
             # Find the name of the best model
             for name, model in self.models.items():
                 if model is self.best_model:
                     summary['best_model'] = name
                     break
-        
+
         return summary
+
+    def train_model(self, model_type: str = 'linear_regression') -> Tuple[bool, Dict[str, float], np.ndarray, np.ndarray]:
+        """
+        Train a specific model type on the data stored in session state.
+
+        Args:
+            model_type: Type of model to train
+
+        Returns:
+            Tuple of (success, metrics, y_test, y_pred)
+        """
+        try:
+            import streamlit as st
+
+            # Check if cleaned data exists
+            if 'cleaned_df' not in st.session_state or st.session_state.cleaned_df is None:
+                return False, {'error': 'No cleaned data available'}, np.array([]), np.array([])
+
+            cleaned_df = st.session_state.cleaned_df
+
+            # Find target column
+            target_column = None
+            possible_targets = ['price', 'Price', 'PRICE', 'SalePrice', 'sale_price']
+            for col in possible_targets:
+                if col in cleaned_df.columns:
+                    target_column = col
+                    break
+
+            if target_column is None:
+                return False, {'error': 'No target column found'}, np.array([]), np.array([])
+
+            # Prepare data
+            X_train, X_test, y_train, y_test = self.prepare_data(cleaned_df, target_column)
+
+            # Train models
+            train_scores = self.train_models(X_train, y_train)
+
+            # Evaluate on test set
+            eval_results = self.evaluate_models(X_test, y_test)
+
+            # Get predictions from best model
+            y_pred = self.predict(X_test)
+
+            # Get metrics for best model
+            best_model_name = None
+            for name, model in self.models.items():
+                if model is self.best_model:
+                    best_model_name = name
+                    break
+
+            if best_model_name and best_model_name in eval_results:
+                metrics = eval_results[best_model_name]
+            else:
+                # Use first model's metrics if best model not found
+                metrics = list(eval_results.values())[0] if eval_results else {}
+
+            return True, metrics, y_test.values, y_pred
+
+        except Exception as e:
+            self.logger.error(f"Error in train_model: {str(e)}")
+            return False, {'error': str(e)}, np.array([]), np.array([])
+
+    def analyze_correlation(self) -> Optional[pd.Series]:
+        """
+        Analyze correlations between features and target column.
+
+        Returns:
+            Series with correlation values, sorted by absolute value
+        """
+        try:
+            import streamlit as st
+
+            # Check if cleaned data exists
+            if 'cleaned_df' not in st.session_state or st.session_state.cleaned_df is None:
+                self.logger.warning("No cleaned data available for correlation analysis")
+                return None
+
+            cleaned_df = st.session_state.cleaned_df
+
+            # Find target column
+            target_column = None
+            possible_targets = ['price', 'Price', 'PRICE', 'SalePrice', 'sale_price']
+            for col in possible_targets:
+                if col in cleaned_df.columns:
+                    target_column = col
+                    break
+
+            if target_column is None:
+                self.logger.warning("No target column found for correlation analysis")
+                return None
+
+            # Select only numeric columns
+            numeric_df = cleaned_df.select_dtypes(include=[np.number])
+
+            if target_column not in numeric_df.columns:
+                self.logger.warning(f"Target column {target_column} is not numeric")
+                return None
+
+            # Calculate correlations with target
+            correlations = numeric_df.corr()[target_column]
+
+            # Sort by absolute value, descending
+            correlations_sorted = correlations.abs().sort_values(ascending=False)
+
+            # Return the correlations in the sorted order (with original signs)
+            return correlations[correlations_sorted.index]
+
+        except Exception as e:
+            self.logger.error(f"Error in analyze_correlation: {str(e)}")
+            return None
+
+    def get_top_features(self, n: int = 5) -> pd.DataFrame:
+        """
+        Get top N most important features.
+
+        Args:
+            n: Number of top features to return
+
+        Returns:
+            DataFrame with top features and their importance
+        """
+        if self.feature_importance is not None:
+            return self.feature_importance.head(n)
+        else:
+            self.logger.warning("Feature importance not available. Train a model first.")
+            return pd.DataFrame(columns=['feature', 'importance'])

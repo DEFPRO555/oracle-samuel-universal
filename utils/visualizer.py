@@ -15,8 +15,9 @@ class RealEstateVisualizer:
     Supports both static matplotlib/seaborn and interactive plotly visualizations.
     """
     
-    def __init__(self):
+    def __init__(self, df: pd.DataFrame = None):
         self.logger = logging.getLogger(__name__)
+        self.df = df
         self.set_style()
     
     def set_style(self):
